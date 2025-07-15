@@ -2,13 +2,21 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import { FaCheck, FaCopy } from "react-icons/fa";
 
 function App() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const chatEndRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
+  const handleTextCopy = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -26,9 +34,12 @@ function App() {
     setIsLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:3001/api/chat", {
-        prompt: input,
-      });
+      const res = await axios.post(
+        "https://chat-bot-gemini-1-qdhm.onrender.com/api/chat",
+        {
+          prompt: input,
+        }
+      );
 
       const geminiMessage = { role: "gemini", text: res.data.reply };
       setMessages((prev) => [...prev, geminiMessage]);
@@ -67,6 +78,15 @@ function App() {
                 : "bg-red-200 self-start text-left"
             }`}
           >
+            {msg.role === "gemini" && (
+              <div
+                onClick={() => handleTextCopy(msg.text)}
+                className="text-xs text-gray-500 cursor-pointer position-relative flex items-center justify-end gap-1 mb-2 me-0"
+              >
+                {isCopied ? <FaCheck size="1em" /> : <FaCopy size="1em" />}
+                <span>{isCopied ? "Copied!" : "Copy"}</span>
+              </div>
+            )}
             {msg.role === "gemini" ? (
               <div dangerouslySetInnerHTML={renderMarkdown(msg.text)} />
             ) : (
@@ -76,7 +96,7 @@ function App() {
         ))}
         <div ref={chatEndRef} />
         {isLoading && (
-          <div className="flex gap-2 " >
+          <div className="flex gap-2 ">
             <div
               className="animate-ping  bg-black "
               style={{ width: "5px", height: "5px", borderRadius: "50%" }}
